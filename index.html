@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>People Analytics 360 | Deep Dark BI</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Plus Jakarta Sans', sans-serif; background-color: #020617; color: #f1f5f9; }
+        .sidebar { background-color: #0f172a; border-right: 1px solid #1e293b; height: 100vh; position: fixed; width: 280px; z-index: 50; }
+        .main-content { margin-left: 280px; padding: 40px; }
+        .card { background: #0f172a; border-radius: 16px; border: 1px solid #1e293b; transition: all 0.3s ease; }
+        .card:hover { border-color: #38bdf8; }
+        .slicer-label { font-size: 10px; font-weight: 800; color: #64748b; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 8px; display: block; }
+        select { width: 100%; padding: 12px; background: #1e293b; border: 1px solid #334155; border-radius: 10px; color: #f1f5f9; font-size: 13px; cursor: pointer; outline: none; }
+        select:focus { border-color: #38bdf8; }
+        .kpi-val { font-size: 28px; font-weight: 800; color: #f8fafc; }
+    </style>
+</head>
+<body>
+
+    <aside class="sidebar p-8">
+        <div class="mb-10">
+            <div class="flex items-center gap-3 mb-2">
+                <div class="w-2 h-8 bg-[#38bdf8] rounded-full shadow-[0_0_15px_#38bdf8]"></div>
+                <h2 class="text-xl font-extrabold tracking-tight">People <span class="text-[#38bdf8]">360</span></h2>
+            </div>
+            <p class="text-[10px] text-slate-500 font-bold uppercase tracking-widest">Advanced BI Suite</p>
+        </div>
+
+        <div class="space-y-6">
+            <div>
+                <label class="slicer-label">Unidade de Negócio</label>
+                <select id="deptSlicer" onchange="updateDashboard()">
+                    <option value="all">Consolidado Geral</option>
+                    <option value="tech">Tecnologia & Dados</option>
+                    <option value="sales">Vendas & Growth</option>
+                </select>
+            </div>
+            <div>
+                <label class="slicer-label">Período Fiscal</label>
+                <select id="yearSlicer" onchange="updateDashboard()">
+                    <option value="2026">Exercício 2026</option>
+                    <option value="2025">Exercício 2025</option>
+                </select>
+            </div>
+            <div>
+                <label class="slicer-label">Localidade</label>
+                <select id="hubSlicer" onchange="updateDashboard()">
+                    <option value="br">Brasil (Todos)</option>
+                    <option value="sp">São Paulo (HQ)</option>
+                    <option value="rem">Remoto</option>
+                </select>
+            </div>
+        </div>
+        
+        <div class="mt-20 pt-8 border-t border-slate-800 text-center">
+            <span class="bg-emerald-500/10 text-emerald-400 text-[10px] px-3 py-1 rounded-full border border-emerald-500/20 font-black uppercase tracking-widest">Dados Sincronizados</span>
+        </div>
+    </aside>
+
+    <main class="main-content">
+        <header class="mb-10">
+            <h1 id="dynamicTitle" class="text-3xl font-black text-white mb-2 italic">Carregando...</h1>
+            <p id="dynamicSubtitle" class="text-slate-400 font-medium">Sincronizando modelo de dados...</p>
+        </header>
+
+        <section class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-8">
+            <div class="card p-5">
+                <p class="slicer-label">Headcount</p>
+                <h2 id="hcVal" class="kpi-val">-</h2>
+            </div>
+            <div class="card p-5">
+                <p class="slicer-label">Turnover</p>
+                <h2 id="turnVal" class="kpi-val text-amber-500">-</h2>
+            </div>
+            <div class="card p-5">
+                <p class="slicer-label">eNPS Score</p>
+                <h2 id="enpsVal" class="kpi-val text-[#38bdf8]">-</h2>
+            </div>
+            <div class="card p-5">
+                <p class="slicer-label">Horas Trein.</p>
+                <h2 id="trainVal" class="kpi-val">-</h2>
+            </div>
+            <div class="card p-5">
+                <p class="slicer-label">Absenteísmo</p>
+                <h2 id="absVal" class="kpi-val">-</h2>
+            </div>
+            <div class="card p-5">
+                <p class="slicer-label">PDI Ativo</p>
+                <h2 id="pdiVal" class="kpi-val">-</h2>
+            </div>
+        </section>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+            <div class="card p-8 lg:col-span-2">
+                <h3 class="text-xs font-bold text-slate-400 mb-8 uppercase tracking-widest">Fluxo Mensal (Admissão vs Saída)</h3>
+                <div class="h-[300px]"><canvas id="evolutionChart"></canvas></div>
+            </div>
+            <div class="card p-8">
+                <h3 class="text-xs font-bold text-slate-400 mb-8 uppercase tracking-widest">Senioridade</h3>
+                <div class="h-[300px]"><canvas id="seniorChart"></canvas></div>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
+            <div class="card p-8 bg-gradient-to-br from-slate-900 to-[#020617] border-blue-500/20">
+                <h3 class="text-[10px] font-black text-[#38bdf8] uppercase tracking-[0.2em] mb-6">Insight Estratégico</h3>
+                <p id="insightText" class="text-sm text-slate-300 leading-relaxed italic">Analizando padrões...</p>
+            </div>
+            <div class="card p-8 lg:col-span-3">
+                <h3 class="text-xs font-bold text-slate-400 mb-6 uppercase tracking-widest text-center">Matriz de Competências (Radar)</h3>
+                <div class="h-[300px]"><canvas id="radarChart"></canvas></div>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        // --- BANCO DE DADOS COMPLETO ---
+        // Aqui eu mapeei as combinações principais para que nada fique em branco
+        const dataRepo = {
+            "all-2026-br": { hc: "1.452", turn: "3.2%", enps: "74", train: "42h", abs: "1.2%", pdi: "88%", evo: {h:[45,52,60,48,55,62], t:[12,10,15,8,11,9]}, sen:[40,35,25], rad:[80,85,75,90,70], ins:"Cenário Geral: Foco em retenção de talentos Sênior no Brasil." },
+            "all-2025-br": { hc: "1.310", turn: "4.1%", enps: "68", train: "38h", abs: "1.5%", pdi: "72%", evo: {h:[30,40,35,45,40,42], t:[15,12,18,10,14,12]}, sen:[45,35,20], rad:[70,75,70,80,65], ins:"Histórico 2025: Período de expansão agressiva com turnover acima da meta." },
+            "all-2025-sp": { hc: "820", turn: "3.9%", enps: "70", train: "40h", abs: "1.4%", pdi: "75%", evo: {h:[20,25,22,30,28,31], t:[8,6,10,5,7,8]}, sen:[35,40,25], rad:[75,80,75,85,70], ins:"Análise SP 2025: Hub central manteve engajamento estável durante a transição." },
+            "tech-2026-br": { hc: "480", turn: "1.8%", enps: "85", train: "65h", abs: "0.5%", pdi: "94%", evo: {h:[15,20,25,18,22,30], t:[2,3,2,1,2,1]}, sen:[20,30,50], rad:[95,70,85,98,75], ins:"Tech 2026: Alta performance técnica e retenção recorde." },
+            "sales-2026-br": { hc: "320", turn: "5.5%", enps: "62", train: "28h", abs: "2.1%", pdi: "70%", evo: {h:[10,15,20,12,18,15], t:[6,8,10,5,7,6]}, sen:[60,30,10], rad:[60,95,70,60,90], ins:"Sales 2026: Turnover elevado. Sugerido revisão de metas e bônus." }
+        };
+
+        let evoChart, senChart, radChart;
+
+        function initCharts() {
+            // Setup Global Chart Colors
+            Chart.defaults.color = '#94a3b8';
+            Chart.defaults.font.family = "'Plus Jakarta Sans', sans-serif";
+
+            evoChart = new Chart(document.getElementById('evolutionChart'), {
+                type: 'line',
+                data: { labels: ['Jan','Fev','Mar','Abr','Mai','Jun'], datasets: [{label:'Admissões', data:[], borderColor:'#38bdf8', tension:0.4, fill:true, backgroundColor:'rgba(56,189,248,0.05)'}, {label:'Saídas', data:[], borderColor:'#f43f5e', borderDash:[5,5], tension:0.4}] },
+                options: { responsive:true, maintainAspectRatio:false }
+            });
+
+            senChart = new Chart(document.getElementById('seniorChart'), {
+                type: 'doughnut',
+                data: { labels:['Jr','Pl','Sr'], datasets:[{data:[], backgroundColor:['#0ea5e9','#0284c7','#0369a1'], borderWidth:0}] },
+                options: { cutout:'80%', responsive:true, maintainAspectRatio:false }
+            });
+
+            radChart = new Chart(document.getElementById('radarChart'), {
+                type: 'radar',
+                data: { labels:['Hard Skills','Soft Skills','Cultura','Produtividade','NPS'], datasets:[{label:'Score', data:[], borderColor:'#38bdf8', backgroundColor:'rgba(56,189,248,0.2)'}] },
+                options: { responsive:true, maintainAspectRatio:false, scales:{r:{grid:{color:'#1e293b'}, angleLines:{color:'#1e293b'}, ticks:{display:false}}}}
+            });
+
+            updateDashboard();
+        }
+
+        function updateDashboard() {
+            const dept = document.getElementById('deptSlicer').value;
+            const year = document.getElementById('yearSlicer').value;
+            const hub = document.getElementById('hubSlicer').value;
+            
+            // Gerar chave de busca
+            const key = `${dept}-${year}-${hub}`;
+            
+            // FALLBACK: Se a combinação não existir, ele pega a visão geral do ano selecionado
+            const data = dataRepo[key] || dataRepo[`all-${year}-br`] || dataRepo["all-2026-br"];
+
+            // Feedback visual rápido
+            document.querySelector('main').style.opacity = '0.4';
+
+            setTimeout(() => {
+                // Atualizar Títulos (Corrigindo o erro de "Empresa Inteira: 2026" fixo)
+                const deptName = document.getElementById('deptSlicer').options[document.getElementById('deptSlicer').selectedIndex].text;
+                document.getElementById('dynamicTitle').innerText = `${deptName}: ${year}`;
+                document.getElementById('dynamicSubtitle').innerText = `Visão para a localidade: ${hub.toUpperCase()}`;
+
+                // Atualizar KPIs
+                document.getElementById('hcVal').innerText = data.hc;
+                document.getElementById('turnVal').innerText = data.turn;
+                document.getElementById('enpsVal').innerText = data.enps;
+                document.getElementById('trainVal').innerText = data.train;
+                document.getElementById('absVal').innerText = data.abs;
+                document.getElementById('pdiVal').innerText = data.pdi;
+
+                // Atualizar Gráficos
+                evoChart.data.datasets[0].data = data.evo.h;
+                evoChart.data.datasets[1].data = data.evo.t;
+                evoChart.update();
+
+                senChart.data.datasets[0].data = data.sen;
+                senChart.update();
+
+                radChart.data.datasets[0].data = data.rad;
+                radChart.update();
+
+                // Atualizar Insight
+                document.getElementById('insightText').innerText = data.ins;
+
+                document.querySelector('main').style.opacity = '1';
+            }, 300);
+        }
+
+        window.onload = initCharts;
+    </script>
+</body>
+</html>
